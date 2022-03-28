@@ -13,8 +13,9 @@ abstract class SQL{
 
     protected $DB;
     protected $DBname;
+    protected $tableName;
 
-    function __construct($DBconfig)
+    function __construct($DBconfig, $tableName)
     {        
         try {
         $this->DB = new PDO('mysql:dbname='.$DBconfig['database'].';host='.$DBconfig['hostname'], $DBconfig['username'], $DBconfig['password'], array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
@@ -25,6 +26,10 @@ abstract class SQL{
         }
 
         $this->DBname = $DBconfig['database'];
+        $this->tableName = $tableName;
+
+        $this->createDB();
+        $this->createTable();
     }
 
 
@@ -104,7 +109,7 @@ abstract class SQL{
         }
     }
 
-    public function createTable(){}
+    protected function createTable(){}
 
     protected function executeQuery($queryStr,array $params = []):PDOStatement
     {
@@ -116,23 +121,12 @@ abstract class SQL{
 
     public function add(array $data)
     {
-        $query = 'INSERT INTO '.$this->tableName;
+        $query = 'INSERT INTO '.$this->tableName . ' SET ';
         $params = [];
 
         if (!empty($data)) {
             
-            $lastKey = array_key_last($data);
-
-            foreach ($data as $fieldName => $value) {
-                
-                $query.= strtoupper($fieldName) . ' = ?';
-
-                if ($lastKey != $fieldName) {
-                    $query.= ', ';
-                }
-
-                $params[]  = $value;
-            }
+            $this->setQueryParam($query, $params, $data);
         }else {
             Logger::errorLog('DB', 'Data not add. Empty array');
 
@@ -149,7 +143,7 @@ abstract class SQL{
         }
     }
 
-    public function get($tableName ,array $select, array $filter = [], $order = 'ASC')
+    public function get(array $select, array $filter = [], $order = 'ASC')
     {
         if (empty($tableName)) {
             Logger::errorLog('DB', 'Empty table');
@@ -160,39 +154,19 @@ abstract class SQL{
         $params = [];
 
         if(!empty($select)){
-
-            $lastKey = array_key_last($select);
-
-            foreach ($select as $key => $fieldName) {
-                
-                $query .= strtoupper($fieldName);
-
-                if ($lastKey != $key) {
-                    $query .= ',';
-                }
-            }
+            
+            $this->setSelect($query, $select);
         }else {
             $query.= '*';
         }
 
-        $query.= ' FROM ' . $tableName;
+        $query.= ' FROM ' . $this->tableName;
 
         if (!empty($filter)) {
             
             $query.= ' WHERE ';
 
-            $lastKey = array_key_last($filter);
-
-            foreach ($filter as $fieldName => $value) {
-                
-                $query.= strtoupper($fieldName) . ' = ?';
-
-                if ($lastKey != $fieldName) {
-                    $query.= ' AND ';
-                }
-
-                $params[]  = $value;
-            }
+            $this->setQueryParam($query, $params, $filter, ' AND ');
         }
 
         $state = $this->executeQuery($query, $params);
@@ -212,24 +186,14 @@ abstract class SQL{
 
     public function delete($data)
     {
-        $query = 'DELETE FROM '.$this->tableName;
+        $query = 'DELETE FROM '.$this->tableName.' WHERE ';
 
         $params = [];
 
         if (!empty($data)) {
             
-            $lastKey = array_key_last($data);
+            $this->setQueryParam($query, $params, $data, ' AND ');
 
-            foreach ($data as $fieldName => $value) {
-                
-                $query.= strtoupper($fieldName) . ' = ?';
-
-                if ($lastKey != $fieldName) {
-                    $query.= ' AND ';
-                }
-
-                $params[]  = $value;
-            }
         }else {
             Logger::errorLog('DB', 'Data not delete. Empty array');
 
@@ -250,23 +214,13 @@ abstract class SQL{
     {
         $query = 'UPDATE '.$this->tableName;
 
-        $param = [];
+        $params = [];
 
         if (!empty($data)) {
             
-            $lastKey = array_key_last($data);
-
-            foreach ($data as $fieldName => $value) {
-                
-                $query.= strtoupper($fieldName) . ' = ?';
-
-                if ($lastKey != $fieldName) {
-                    $query.= ', ';
-                }
-
-                $params[]  = $value;
-            }
+            $this->setQueryParam($query, $params, $data);
         }else {
+
             Logger::errorLog('DB', 'Data not update. Empty array');
 
             return false;
@@ -276,23 +230,45 @@ abstract class SQL{
 
             $query.= ' WHERE ';
             
-            $lastKey = array_key_last($data);
+            $this->setQueryParam($query, $params, $filter, ' AND ');
+        }else {
+            
+            Logger::errorLog('DB', 'Data not update. Empty filter array');
 
-            foreach ($data as $fieldName => $value) {
-                
-                $query.= strtoupper($fieldName) . ' = ?';
+            return false;
+        }
+    }
 
-                if ($lastKey != $fieldName) {
-                    $query.= ' AND ';
-                }
+    protected function setQueryParam(&$query, &$params, $data,  $separator = ', ')
+    {
+        $lastKey = array_key_last($data);
 
-                $params[]  = $value;
+        foreach ($data as $fieldName => $value) {
+            
+            $query.= strtoupper($fieldName) . ' = ?';
+            
+            $params[]  = $value;
+
+            if ($lastKey != $fieldName) {
+                $query.= $separator;
             }
         }
     }
 
-    protected function queryBuilder(&$query, &$param, $separator = ', ', $select = false)
+    protected function setSelect(&$query, $select)
     {
+        $lastKey = array_key_last($select);
 
+        foreach ($select as $key => $fieldName) {
+            
+            $query .= strtoupper($fieldName);
+
+            if ($lastKey != $key) {
+                $query .= ', ';
+            }
+        }
     }
 }
+
+
+
