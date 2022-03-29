@@ -69,9 +69,9 @@ abstract class SQL{
     }
 
     /* DEBUG */
-    public function deleteTable($tableName)
+    public function deleteTable()
     {
-        $query = 'DROP TABLE `'.$tableName.'`';
+        $query = 'DROP TABLE '.$this->tableName;
 
         $res = $this->executeQuery($query);
         print_r($res->errorInfo());
