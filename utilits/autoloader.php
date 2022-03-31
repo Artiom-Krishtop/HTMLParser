@@ -15,3 +15,4 @@ function dd($test, $die = true)
     echo '<pre>' . print_r($test, 1) . '</pre>';
     if($die)die();
 }
+?>

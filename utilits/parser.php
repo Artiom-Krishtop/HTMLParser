@@ -30,24 +30,29 @@ class Parser{
 
    function __construct($url)
    {
-      if(!preg_match('/(http|www)/', $url)){
-
-         $url = 'https://'.$url .'/';
-      }
-
       $this->siteURL = $url;
       $this->html = $this->request($this->siteURL);
    }
 
    public function parse()
    {
-      // $this->isBitrixCMS();  
+      if(!empty($this->isBitrixCMS())) return $this->isBitrixCMS();
+
+      return [];
    }
 
-   protected function request($url, $data = [], $returnCode = false)
+   public function getHtml()
    {
-      dd($url, false);
+      return $this->html;
+   }
 
+   public function getSiteUrl()
+   {
+      return $this->siteURL;
+   }
+
+   protected function request($url, $data = [])
+   {
       $url = $this->siteURL;
 
       if (!empty($data)) {
@@ -65,76 +70,62 @@ class Parser{
       $html = curl_exec($ch);
       $error = curl_error($ch);
       $curlInfo = curl_getinfo($ch);
-      dd($curlInfo['http_code'], false);
+
       curl_close($ch);
-
-      // if ($curlInfo['http_code'] == 301 && $this->counter != 3) {
-
-      //    $this->counter++;
-
-      //    Logger::log($this->siteURL . ' returned code 301. Redirect to '.$curlInfo['redirect_url']);
-
-      //    $this->request($curlInfo['redirect_url']);
-      // }
-
-      if ($returnCode) {
-         
-         return $curlInfo['http_code'];
-      }
 
       if (!empty($error)) {
          
          Logger::errorLog('CURL', $error);
       }
-      
-      $this->counter = 0;
 
+      if($curlInfo['http_code'] != 200)
+      {
+         Logger::errorLog('CURL', 'Requset returned code '. $curlInfo['http_code']);
+
+         return $html = '';
+      }
+      
       return $html;
    }
 
    protected function isBitrixCMS()
    {
-      $code = $this->checkUrlAdmin('bitrix');
-      dd($code, false);
-      if ($code === 200) {
-         # code...
-      }
-      return true;
-      $pattern = '/((href|src)=.+(bitrix|local).+)|(class=.+bx-.+)/';
+      $data = [];
+
       $pattern = '/(\/bitrix\/|\/local\/|bx-)/';
 
       if (preg_match($pattern, $this->html)) {
-         
-         if ($this->isSites24()) {
-            # code...
-         }
-      }
-   }
 
-   protected function isSites24(){
-      return false;
-   }
+         $data['SITE_CMS'] = 'bitrix';
 
-   protected function checkUrlAdmin($nameCMS)
-   {
-      if (is_array($this->adminURL[$nameCMS])) {
-         
-         $listCode = [];
-
-         foreach ($this->adminURL[$nameCMS] as $adminUrl) {
+         if ($this->find(['landing24'])) {
             
-            $url = $this->siteURL.$adminUrl;
+            $data['VERSION_CMS'] = 'Sites24';
 
-            $listCode[] = $this->request($url, [], true);
+         }else {
+
+            $data['VERSION_CMS'] = 'BUS';
          }
 
-         return $listCode;
+         if($this->find(['/crm/site_button/'])){
 
-      }else {
-         
-         $url = $this->siteURL.$this->adminURL[$nameCMS];
-         
-         return $this->request($url, [], true);
+            $data['WIDGET'] = true;
+         }
       }
+
+      return $data;
+   }
+
+   protected function find(array $arrNeedle){
+
+      foreach ($arrNeedle as $str) {
+         
+         if(strpos($this->html, $str) !== false){
+   
+            return true;
+         }
+   
+      }
+      return false;
    }
 } 

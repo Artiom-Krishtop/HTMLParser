@@ -28,6 +28,16 @@ class Helper{
 
          $sitesList = array_merge($sitesList, explode("\n",file_get_contents($filePath)));
       }
+
+      foreach ($sitesList as &$url) {
+         
+         if(!preg_match('/(http|www)/', $url)){
+
+            $url = 'https://'.$url .'/';
+         }
+      }
+
+      unset($url);
       
       return $sitesList;
    }

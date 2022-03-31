@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 
 require_once 'utilits/autoloader.php';
@@ -8,26 +9,49 @@ use Utilits\Logger;
 use Utilits\Helper;
 use Utilits\Parser;
 
+set_time_limit(0);
+
 $siteInfoTable = new SiteInfoSQL(DataBaseConfig::GetConfig(), 'site_info_list');
 
-// $sql->add(['SITE_NAME' => 'www.tut.by', 'SITE_CMS' => 'bitrix', 'VERSION_CMS' => 'BUS', 'WIDGET' => false]);
-
-// $filter = ['SITE_NAME' => 'www.tut.by','SITE_CMS' => 'bitrix'];
-// // $filter =[];
-// $select = ['SITE_NAME', 'SITE_CMS', 'VERSION_CMS', 'WIDGET'];
-// $sql->get($select, $filter);
+// $siteInfoTable->deleteTable();
+// dd($siteInfoTable->get());
+// die();
 
 $urlList = Helper::getSitesURLList();
-// $urlList = ['https://deal.by'];
+
+$data = [];
 $counter = 0;
 
-foreach ($urlList as $key => $url) {
+// foreach ($urlList as $url) {
    
-   $counter++;
-   if($counter == 40) break;
+//    $counter++;
+//    $data[] = [$url];
 
+//    if ($counter == 100) {
+      
+//       $siteInfoTable->add($data, ['SITE_NAME']);
+//       $data = [];
+//       $counter = 0;
+//    }
+// }
+
+foreach ($urlList as $key => $url) {
+
+   Logger::log('Start parse '.$url);
+   
    $parser = new Parser($url);
 
-   $parser->parse();
+   if(!empty($parser->getHtml())){
 
+      $res = $parser->parse();
+
+      if(!empty($res)){
+
+         $filter =[
+            'SITE_NAME' => $parser->getSiteUrl()
+         ];
+   
+         $siteInfoTable->update($res, $filter);
+      }
+   }
 }

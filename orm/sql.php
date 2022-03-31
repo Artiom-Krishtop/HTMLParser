@@ -1,4 +1,4 @@
-<?
+<?php
 
 namespace ORM;
 
@@ -87,11 +87,33 @@ abstract class SQL{
         $res = $state->errorInfo();
 
         if ($res[0] != 00000) {
-            Logger::errorLog('DB', $res[3]);
+            Logger::errorLog('DB', $res[2]);
             dd($res, false);
         }else {
             dd($state->fetchAll(PDO::FETCH_ASSOC), false);
         }
+    }
+
+    public function getFieldsTable()
+    {
+        $fields = [];
+
+        $query = 'SHOW COLUMNS FROM `'.$this->tableName.'`';
+
+        $state = $this->executeQuery($query);
+        
+        $res = $state->errorInfo();
+
+        if ($res[0] != 00000) {
+            Logger::errorLog('DB', $res[2]);
+        }else {
+
+            while ($rs = $state->fetch(PDO::FETCH_ASSOC)) {
+                $fields[] = $rs['Field'];      
+            }
+        }
+
+        return $fields;
     }
 
     public function createDB()
@@ -103,7 +125,7 @@ abstract class SQL{
         $res = $state->errorInfo();
 
         if ($res[0] != 00000) {
-            Logger::errorLog('DB', $res[3]);
+            Logger::errorLog('DB', $res[2]);
         }else {
             Logger::log('Create DB:',$this->DBname);
         }
@@ -119,14 +141,24 @@ abstract class SQL{
         return $query;
     }
 
-    public function add(array $data)
+    public function add(array $data, $fields)
     {
-        $query = 'INSERT INTO '.$this->tableName . ' SET ';
+        $fields = implode('`,`', $fields);
+        $query = "INSERT INTO {$this->tableName} (`{$fields}`) VALUES ";
         $params = [];
 
         if (!empty($data)) {
-            
-            $this->setQueryParam($query, $params, $data);
+
+            $queryParamArr = [];
+
+            foreach ($data as $key => $value) {
+                
+                $queryParamArr[] = '("'.implode(',', $value).'")';
+            }
+
+            $query.= implode(', ',$queryParamArr);
+
+            // dd($query);
         }else {
             Logger::errorLog('DB', 'Data not add. Empty array');
 
@@ -138,12 +170,12 @@ abstract class SQL{
         $res = $state->errorInfo();
 
         if ($res[0] != 00000) {
-            Logger::errorLog('DB', $res[3]);
+            Logger::errorLog('DB', $res[2]);
             dd($res, false);
         }
     }
 
-    public function get(array $select, array $filter = [], $order = 'ASC')
+    public function get(array $select = [], array $filter = [], $order = 'ASC')
     {
         if (empty($tableName)) {
             Logger::errorLog('DB', 'Empty table');
@@ -174,7 +206,7 @@ abstract class SQL{
         $res = $state->errorInfo();
 
         if ($res[0] != 00000) {
-            Logger::errorLog('DB', $res[3]);
+            Logger::errorLog('DB', $res[2]);
             dd($res, false);
         }else {
             dd($state->fetchAll(PDO::FETCH_ASSOC));
@@ -205,7 +237,7 @@ abstract class SQL{
         $res = $state->errorInfo();
 
         if ($res[0] != 00000) {
-            Logger::errorLog('DB', $res[3]);
+            Logger::errorLog('DB', $res[2]);
             dd($res, false);
         }
     }
