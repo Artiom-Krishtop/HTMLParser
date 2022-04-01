@@ -27,6 +27,7 @@ class Helper{
          $filePath = $dir . $file;
 
          $sitesList = array_merge($sitesList, explode("\n",file_get_contents($filePath)));
+         unlink($filePath);
       }
 
       foreach ($sitesList as &$url) {
