@@ -5,79 +5,40 @@ namespace ORM;
 use PDO;
 use PDOStatement;
 use Configs\DataBaseConfig;
+use ORM\Connection;
 use Utilits\Logger;
 
-require_once 'utilits/autoloader.php';
+require_once ROOT . '/utilits/autoloader.php';
 
 abstract class SQL{
 
     protected $DB;
-    protected $DBname;
     protected $tableName;
 
     function __construct($DBconfig, $tableName)
     {        
-        try {
-        $this->DB = new PDO('mysql:dbname='.$DBconfig['database'].';host='.$DBconfig['hostname'], $DBconfig['username'], $DBconfig['password'], array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
-        } catch (\PDOException $e) {
-            
-            Logger::errorLog('DB', $e->getMessage());
-            die($e->getMessage());
-        }
+        $DBconnection = new Connection($DBconfig);
 
-        $this->DBname = $DBconfig['database'];
+        $this->DB = $DBconnection->getConnection();
+
         $this->tableName = $tableName;
 
-        $this->createDB();
         $this->createTable();
     }
 
-
-    /* DEBUG */
-    public function tableList():bool
-    {
-
-        $query = 'SHOW TABLES FROM `'.DataBaseConfig::getDBName().'`';
-
-        $state = $this->executeQuery($query);
-        
-        print_r($state->fetchAll(PDO::FETCH_ASSOC));
-
-        return false;
-    }
-
-    /* DEBUG */
-    public function DBlist()
-    {
-        $query = 'SHOW DATABASES';
-
-        $state = $this->executeQuery($query);
-
-        dd($state->fetchAll(PDO::FETCH_ASSOC));
-    }
-
-    /* DEBUG */
-    public function deleteDB()
-    {
-        $query = 'DROP DATABASE `:db_name`';
-        $params = [
-            ':db_name' => DataBaseConfig::getDBName()
-        ];
-
-        $res = $this->executeQuery($query, $params);
-        print_r($res->errorInfo());
-    }
-
-    /* DEBUG */
     public function deleteTable()
     {
         $query = 'DROP TABLE '.$this->tableName;
 
-        $res = $this->executeQuery($query);
-        print_r($res->errorInfo());
+        $state = $this->executeQuery($query);
+        
+        $res = $state->errorInfo();
+
+        if ($res[0] != 00000) {
+            Logger::errorLog('DB', $res[2]);
+        }
     }
 
-    /* DEBUG */
     public function structTable()
     {
         $query = 'SHOW CREATE TABLE `'.$this->tableName.'`';
@@ -88,9 +49,8 @@ abstract class SQL{
 
         if ($res[0] != 00000) {
             Logger::errorLog('DB', $res[2]);
-            dd($res, false);
         }else {
-            dd($state->fetchAll(PDO::FETCH_ASSOC), false);
+            return $state->fetchAll(PDO::FETCH_ASSOC);
         }
     }
 
@@ -114,21 +74,6 @@ abstract class SQL{
         }
 
         return $fields;
-    }
-
-    public function createDB()
-    {
-        $query = 'CREATE DATABASE IF NOT EXISTS `'. $this->DBname .'`';
-
-        $state = $this->executeQuery($query);
-
-        $res = $state->errorInfo();
-
-        if ($res[0] != 00000) {
-            Logger::errorLog('DB', $res[2]);
-        }else {
-            Logger::log('Create DB:',$this->DBname);
-        }
     }
 
     protected function createTable(){}
@@ -158,7 +103,6 @@ abstract class SQL{
 
             $query.= implode(', ',$queryParamArr);
 
-            // dd($query);
         }else {
             Logger::errorLog('DB', 'Data not add. Empty array');
 
@@ -171,16 +115,11 @@ abstract class SQL{
 
         if ($res[0] != 00000) {
             Logger::errorLog('DB', $res[2]);
-            dd($res, false);
         }
     }
 
-    public function get(array $select = [], array $filter = [], $order = 'ASC')
+    public function get(array $select = [], array $filter = [], $order = 'ASC', $limit = '')
     {
-        if (empty($tableName)) {
-            Logger::errorLog('DB', 'Empty table');
-        }
-
         $query = 'SELECT ';
 
         $params = [];
@@ -201,19 +140,22 @@ abstract class SQL{
             $this->setQueryParam($query, $params, $filter, ' AND ');
         }
 
+        if(!empty($limit))
+        {
+            $limit = intval($limit);
+
+            $query.= ' LIMIT ' . $limit;
+        }
+
         $state = $this->executeQuery($query, $params);
 
         $res = $state->errorInfo();
 
         if ($res[0] != 00000) {
             Logger::errorLog('DB', $res[2]);
-            dd($res, false);
         }else {
-            dd($state->fetchAll(PDO::FETCH_ASSOC));
             return $state->fetchAll(PDO::FETCH_ASSOC);
         }
-        
-        dd($query, false);
     }
 
     public function delete($data)
@@ -238,13 +180,12 @@ abstract class SQL{
 
         if ($res[0] != 00000) {
             Logger::errorLog('DB', $res[2]);
-            dd($res, false);
         }
     }
 
-    public function update($data, $filter)
+    public function update($data, $filter, $limit = '')
     {
-        $query = 'UPDATE '.$this->tableName;
+        $query = "UPDATE {$this->tableName} SET ";
 
         $params = [];
 
@@ -268,6 +209,21 @@ abstract class SQL{
             Logger::errorLog('DB', 'Data not update. Empty filter array');
 
             return false;
+        }
+
+        if(!empty($limit))
+        {
+            $limit = intval($limit);
+
+            $query.= ' LIMIT '.$limit;
+        }
+
+        $state = $this->executeQuery($query, $params);
+
+        $res = $state->errorInfo();
+
+        if ($res[0] != 00000) {
+            Logger::errorLog('DB', $res[2]);
         }
     }
 

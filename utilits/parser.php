@@ -63,6 +63,7 @@ class Parser{
 
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+      curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
       curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::CONNECTTIMEOUT);
       curl_setopt($ch, CURLOPT_TIMEOUT, self::CURL_TIMEOUT);
       curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -73,16 +74,22 @@ class Parser{
 
       curl_close($ch);
 
+      Logger::log('HTTP_CODE: '.$curlInfo['http_code']);
+
       if (!empty($error)) {
          
-         Logger::errorLog('CURL', $error);
+         Logger::log('CURL_ERROR');
+         Logger::errorLog('CURL', $error, $this->siteURL);
+
+         return '';
       }
 
       if($curlInfo['http_code'] != 200)
       {
-         Logger::errorLog('CURL', 'Requset returned code '. $curlInfo['http_code']);
+         Logger::log('CURL_ERROR');
+         Logger::errorLog('CURL', 'Requset returned code '. $curlInfo['http_code'], $this->siteURL);
 
-         return $html = '';
+         return '';
       }
       
       return $html;

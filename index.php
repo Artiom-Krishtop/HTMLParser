@@ -11,47 +11,41 @@ use Utilits\Parser;
 
 set_time_limit(0);
 
+define('ROOT', __DIR__);
+define('LIMIT', 1000);
+
 $siteInfoTable = new SiteInfoSQL(DataBaseConfig::GetConfig(), 'site_info_list');
 
-// $siteInfoTable->deleteTable();
-// dd($siteInfoTable->get());
-// die();
-
-$urlList = Helper::getSitesURLList();
-
-$data = [];
-$counter = 0;
-
-// foreach ($urlList as $url) {
-   
-//    $counter++;
-//    $data[] = [$url];
-
-//    if ($counter == 100) {
-      
-//       $siteInfoTable->add($data, ['SITE_NAME']);
-//       $data = [];
-//       $counter = 0;
-//    }
-// }
+$urlList = $siteInfoTable->get(['SITE_NAME'], ['CHECKED' => false], 'ASC');
 
 foreach ($urlList as $key => $url) {
 
-   Logger::log('Start parse '.$url);
-   
-   $parser = new Parser($url);
+   Logger::log('Start parse '.$url['SITE_NAME']);
 
+   
+   $parser = new Parser($url['SITE_NAME']);
+   
    if(!empty($parser->getHtml())){
 
       $res = $parser->parse();
-
+      
       if(!empty($res)){
-
+         
          $filter =[
-            'SITE_NAME' => $parser->getSiteUrl()
+            'SITE_NAME' => $parser->getSiteUrl(),
          ];
-   
+
+         $res['CHECKED'] = true;
+         
          $siteInfoTable->update($res, $filter);
+
+         continue;
       }
    }
+
+   $siteInfoTable->update(['CHECKED' => true], ['SITE_NAME' => $url['SITE_NAME']]);
 }
+exit("FINISH\n");?>
+
+
+

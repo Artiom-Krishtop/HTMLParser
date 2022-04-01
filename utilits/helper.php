@@ -12,7 +12,7 @@ class Helper{
    {
       $sitesList = [];
 
-      $dir = $_SERVER['DOCUMENT_ROOT'] . self::DIR_FILES_LIST_SITES;
+      $dir = ROOT. self::DIR_FILES_LIST_SITES;
 
       if (!file_exists($dir)) {
          mkdir($dir);

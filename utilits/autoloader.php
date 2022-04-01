@@ -2,10 +2,9 @@
 
 spl_autoload_register(function($className){
 
-    $path = strtolower(str_replace('\\', '/',$className)) . '.php';
+    $path = ROOT . '/' .strtolower(str_replace('\\', '/',$className)) . '.php';
 
     if (file_exists($path)) {
-        
         include $path;
     }
 });

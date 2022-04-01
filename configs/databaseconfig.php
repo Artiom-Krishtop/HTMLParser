@@ -5,9 +5,9 @@ namespace Configs;
 class DataBaseConfig{
 
     // connect DB
-    private const HOST = 'mysql';
+    private const HOST = 'localhost';
     private const LOGIN = 'root';
-    private const PASSWORD = 'bitrix';
+    private const PASSWORD = '';
     private const DB_NAME = 'bitrix';
 
     // table name
